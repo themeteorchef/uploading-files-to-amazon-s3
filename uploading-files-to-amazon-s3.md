@@ -220,5 +220,311 @@ Above, we're demonstrating populating our `settings-development.json` file with 
 Once these are in place, we're done configuring Amazon and are ready to write some code to make our uploading work. Let's dive in!
 
 ### Creating the upload form
+First up, we need to create a form for actually _uploading_ our files. This includes two steps: creating a parent template where our form will live (along with our list of uploads) and then creating the child template with the actual form. Let's take a look:
+
+<p class="block-header">/client/templates/authenticated/upload.html</p>
+
+```markup
+<template name="upload">
+  <h4 class="page-header">Upload a File to Amazon S3</h4>
+  {{> uploader}}
+</template>
+```
+Pretty straightforward. Here, we simply give our page a title and then add an include for our `{{> uploader}}` template. We'll be updating this `upload` template later to include our list of files, but for now, let's jump over to our `uploader` template and see how that's shaping up.
+
+<p class="block-header">/client/templates/authenticated/uploader.html</p>
+
+```markup
+<template name="uploader">
+  <div class="upload-area">
+    <form id="upload">
+      <p class="alert alert-success text-center">
+        <span>Click or Drag a File Here to Upload</span>
+        <input type="file">
+      </p>
+    </form>
+  </div>
+</template>
+```
+Simple as well! Nice! Here, we've created a long "bar" interface where users can either click to add files, or, drag and drop their files. We're not doing anything special for the drag and drop here. We're getting this for free in browsers that support it. As a fallback, we have a vanilla `file` input. To make this not look totally apalling, we've added a bit of CSS to make our input stretch across are click/drop zone invisibly. For reference, here's the CSS to do it:
+
+<p class="block-header">/client/stylesheets/components/_upload.scss</p>
+
+```css
+.upload-area .alert {
+  position: relative;
+}
+
+.upload-area input[type="file"] {
+  position: absolute;
+  top: 0px;
+  left: 0px;
+  right: 0px;
+  bottom: 0px;
+  width: 100%;
+  opacity: 0;
+}
+```
+Pretty simple! To do the stretch we use absolute positioning on the file input and then make it "invisible" by setting its opacity to `0`. Now, if we click anywhere in the click/drop zone, or, drag a file and drop it, we'll get the native input file behavior. Nice!
+
+That's it for the uploader template. Now, we get to the good stuff: making it store files on S3!
+
+### Wiring up our uploader
+In order to get our uploader working, we need to add a bit of logic to our `uploader` template. Let's crack open the JS file for that now and add an event handler to make this function.
+
+<p class="block-header">/client/templates/authenticated/uploader.js</p>
+
+```javascript
+Template.uploader.events({
+  'change input[type="file"]' ( event, template ) {
+    Modules.client.uploadToAmazonS3( { event: event, template: template } );
+  }
+});
+```
+Nothing to it. Here, we're adding an event handler that watches for changes on our file input. This allows us to account for both clicking to select a file as well as a file being dropped. The "change" that occurs is a file being set. When this happens, we'll fire the code in our event handler. Neat!
+
+But wait...what is this `Modules.client.uploadToAmazonS3()` business? Well, because our process for uploading involves a few different steps, we're going to bake that process into a module. A module is nothing more than a way to separate and organize our code. This allows us to do things like reuse complicated functions and break complex tasks into multiple steps so they're easier to understand and debug if we run into problems.
+
+<div class="note info">
+  <h3>This is a Meteor Chef thing <i class="fa fa-info"></i></h3>
+  <p>This process is <em>not required</em>. The choice to use a module pattern here is done as a demonstration of breaking up complex tasks into more manageable code. If you have your own way of doing things, by all means, feel free to break up the examples into your own patterns!</p>
+</div>
+
+To get our modules working, notice we've set up a namespace `Modules`, followed by the name of the location where this code is expected to run `client` and then the name of the function we'd like to call `uploadToAmazonS3`. The naming convention here implies how this organization pattern works. Modules are located in three directories in our application `/both/modules`, `/client/modules`, and `/server/modules`. The first, `/both/modules`, fulfills two purposes: it sets up the global namespace `Modules` as `Modules = {};` making it available to both the client and server, as well as another namespace, `Modules.both = {};`. 
+
+This may be a bit confusing at first, but notice that these are defined as _global_ variables, meaning they're accessible throughout our application. We define each of the "location" namespaces from within the location. Real quick, here is how namespaces are defined based on the location of where the code will run:
+
+<p class="block-header">/both/modules/_modules.js</p>
+
+```javascript
+Modules      = {};
+Modules.both = {};
+```
+
+<p class="block-header">/client/modules/_modules.js</p>
+
+```javascript
+Modules.client = {};
+```
+
+<p class="block-header">/server/modules/_modules.js</p>
+
+```javascript
+Modules.server = {};
+```
+
+Notice that we only define `Modules = {};` once because we define it in our `/both` directory whose contents are accessible on both the client and the server. From there, we can assign the client and server namespaces accordingly. Take a second to play with this if it's unfamiliar by opening up your browser console and attempting to access `Modules`, `Modules.client`, and `Modules.server`. You'll notice that if you log `Modules` in the browser, it will only have `Modules.both` and `Modules.client` defined. On the server, we see the same but instead of `both` and `client`, we get `server`. 
+
+If this is confusing, hang in there. Let's look at our module code for uploading files. Once we see it in process it should make better sense.
+
+#### The `uploadToAmazonS3` module
+The idea behind our module is to keep all of the code pertaining to one task (in this case, uploading files to Amazon) contained within _a single file_. Then, inside of that file, we break up each of the steps that make up that task into _individual functions_. Why? Clarity. 
+
+When we do this, it makes it extremely clear to see how information is flowing in-and-out of our module. The reason this is important is that it makes it very easy to debug our code, but also, for others to make sense of our code later if we're not around. Let's get a skeleton file set up and then explain each function's purpose.
+
+<p class="block-header">/client/modules/upload-to-amazon-s3.js</p>
+
+```javascript
+let upload = ( options ) => {
+  [...]
+};
+
+Modules.client.uploadToAmazonS3 = upload;
+```
+
+We start by assigning a single function `upload` to our namespace `Modules.client.uploadToAmazonS3`. The idea behind this is that even though our file will contain several functions, we only want to assign _one_ function to our namespace, or, make one function _public_. With this assignment, whenever we call `Modules.client.uploadToAmazonS3()` we're technically calling `upload()`. The namespace, then, is used to make sure our function doesn't clash with any others because we're making this a global variable. Hang in there! 
+
+Let's add a little bit of functionality inside of our `upload` function. I promise this will make sense by the time we wrap up.
+
+<p class="block-header">/client/modules/upload-to-amazon-s3.js</p>
+
+```javascript
+let upload = ( options ) => {
+  template = options.template;
+  let file = _getFileFromInput( options.event );
+
+  _setPlaceholderText( `Uploading ${file.name}...` );
+  _uploadFileToAmazon( file );
+};
+
+Modules.client.uploadToAmazonS3 = upload;
+```
+
+Okay. We've got a few things going on in here. First, we start by assigning a variable `template` equal to the value of `options.template`. Notice that `options` is the single argument passed to our `upload` function. What's going on here? Well, because we've assigned our `upload` function to our namespace `Modules.client.uploadToAmazonS3`, when that's invoked, anything that's passed to it gets passed to our `upload` function. Real quick, here's an example invocation of our module:
+
+<p class="block-header">Example of calling Modules.client.uploadToAmazonS3</p>
+
+```javascript
+Modules.client.uploadToAmazonS3( { template: "something", event: "something else" } );
+```
+Notice that we're not passing single arguments, here, but a single _object_. In our `upload` function, then, when we call `options.template`, this value will equal `"something"`. Make sense? Arguments passed to our namespace are just passed along to the function we've _assigned_ to that namespace. Magic! To be clear, this is a JavaScript convention, not Meteor.
+
+Back in our `upload` function, then, we assign the `template` variable to the value assigned to the `template` key inside of our `options` object. Making a little more sense? But wait...where is this `template` variable coming from? We need to add this. Here's how our module looks with it added:
+
+<p class="block-header">/client/modules/upload-to-amazon-s3.js</p>
+
+```javascript
+let template;
+
+let upload = ( options ) => {
+  template = options.template;
+  let file = _getFileFromInput( options.event );
+
+  _setPlaceholderText( `Uploading ${file.name}...` );
+  _uploadFileToAmazon( file );
+};
+
+Modules.client.uploadToAmazonS3 = upload;
+```
+
+Better? Here, we're defining our `template` variable using `let` ([an ES2015 convention]() for defining mutable variables). To make sure our `template` variable is accessible throughout our module, we move its definition outside of our function. Using `let`, our variable is scoped to the parent block, meaning, if we defined it inside of our `upload` function, the functions we add later wouldn't be able to access it. Again, hang in there, this will make sense in a bit.
+
+Next, we assign a new variable `file` equal to the response of a function `_getFileFromInput()`. Just like our `template` variable, we're going to define this function just above our `upload` function. Here's how it looks:
+
+<p class="block-header">/client/modules/upload-to-amazon-s3.js</p>
+
+```javascript
+let template;
+
+let _getFileFromInput = ( event ) => event.target.files[0];
+
+let upload = ( options ) => {
+  template = options.template;
+  let file = _getFileFromInput( options.event );
+  [...]
+};
+
+Modules.client.uploadToAmazonS3 = upload;
+```
+
+It's pretty simple. Just a one-liner. The purpose of this function is to take the change event from our file input and grab the information about the file our user selected. Here, we use ES2015 expression syntax to shorten up our code a bit. Remember, we can use this when our functions only contain a single line. Using this, we get an explicit return (meaning we can omit `return` from our definition). To be clear, when this is called, here's what we're getting back:
+
+```javascript
+{
+  lastModified: 1442949426000
+  lastModifiedDate: Tue Sep 22 2015 14:17:06 GMT-0500 (CDT)
+  name: "corgi-flop.gif"
+  size: 992607
+  type: "image/gif"
+  webkitRelativePath: ""
+  __proto__: File
+}
+```
+What is this mumbo jumbo? This is the information about the file currently assigned to our file input, or, the file the user selected. As we'll see in a bit, this is what we'll pass to our uploader function to push our file to Amazon. We grab this inside of our `_getFileFromInput()` function because we'll need to access this value more than once in our module.
+
+<p class="block-header">/client/modules/upload-to-amazon-s3.js</p>
+
+```javascript
+let template;
+
+let upload = ( options ) => {
+  template = options.template;
+  let file = _getFileFromInput( options.event );
+
+  _setPlaceholderText( `Uploading ${file.name}...` );
+  [...]
+};
+
+Modules.client.uploadToAmazonS3 = upload;
+```
+
+Back in our `upload` function, we're defining another function called `_setPlaceholderText()`. Any idea what this function is responsible for? Let's take a look.
+
+<p class="block-header">/client/modules/upload-to-amazon-s3.js</p>
+
+```javascript
+[...]
+
+let _setPlaceholderText = ( string = "Click or Drag a File Here to Upload" ) => {
+  template.find( ".alert span" ).innerText = string;
+};
+
+let upload = ( options ) => {
+  template = options.template;
+  let file = _getFileFromInput( options.event );
+
+  _setPlaceholderText( `Uploading ${file.name}...` );
+  [...]
+};
+
+Modules.client.uploadToAmazonS3 = upload;
+```
+
+Okay! Now we're making a little more sense here. First, notice that we're passing a string to this function <code>Uploading ${file.name}...</code>. Here, we're using ES2015's [template strings]() feature to pass a variable directly to our string (in this case, the name of the file selected in our input, or, `corgi-flop.gif`). In our function definition, we're using _another_ feature of ES2015, argument defaults, to say "if we don't pass a string when calling `setPlaceholderText()`, set the value of the `string` argument to 'Click or Draf a File Here to Upload.'"
+
+Once we have a value for `string`, we make use of the `template` variable we set up a little bit ago (this is assigned to the value of the template instance where the change event happened on our input), attempting to find the `.alert span` element and setting its `innerText` property equal to our string. Phew! This should be starting to make a little more sense. For each explicit task involved in uploading our file, we break it off into its own function. First we grabbed the file from our input, now we're setting the placeholder text.
+
+Let's keep on chuggin' and look at the last function we're calling in our `upload` function.
+
+<p class="block-header">/client/modules/upload-to-amazon-s3.js</p>
+
+```javascript
+[...]
+
+let _uploadFileToAmazon = ( file ) => {
+  const uploader = new Slingshot.Upload( "uploadToAmazonS3" );
+
+  uploader.send( file, ( error, url ) => {
+    if ( error ) {
+      Bert.alert( error.message, "warning" );
+      _setPlaceholderText();
+    } else {
+      [...]
+    }
+  });
+};
+
+let upload = ( options ) => {
+  template = options.template;
+  let file = _getFileFromInput( options.event );
+
+  _setPlaceholderText( `Uploading ${file.name}...` );
+  _uploadFileToAmazon( file );
+};
+
+Modules.client.uploadToAmazonS3 = upload;
+```
+
+Hmm. See where this is heading? Inside of `_uploadFileToAmazon`, we're passing in the file that we pulled from our change event with `_getFileFromInput()`. Inside, we're finally getting to our upload code. First, we're defining  a new constant `uploader` and assigning it to an instance of `Slingshot.Upload()`, passing the name of a "directive"—`uploadToAmazonS3`—that we'll define on the server later.
+
+Next, we invoke our `uploader` instance's `send` method, passing in the file from our input. At this point, we're making a call to Amazon S3 behind the scenes to get our file uploaded. Real quick, let's jump up to the server to see how we configure Slingshot to handle this process.
+
+#### Configuring Slingshot on the server
+In order to actually make our uploads to Amazon S3 work via Slingshot, we need to configure a few things on the server.
+
+<p class="block-header">/server/slingshot.js</p>
+
+```javascript
+Slingshot.fileRestrictions( "uploadToAmazonS3", {
+  allowedFileTypes: [ "image/png", "image/jpeg", "image/gif" ],
+  maxSize: 1 * 1024 * 1024
+});
+
+Slingshot.createDirective( "uploadToAmazonS3", Slingshot.S3Storage, {
+  bucket: "<name-of-our-bucket>",
+  acl: "public-read",
+  authorize: function () {
+    let userFileCount = Files.find( { "userId": this.userId } ).count();
+    return userFileCount < 3 ? true : false;
+  },
+  key: function ( file ) {
+    var user = Meteor.users.findOne( this.userId );
+    return user.emails[0].address + "/" + file.name;
+  }
+});
+```
+
+Two methods to pay attention to: `Slingshot.fileRestrictions()` and `Slingshot.createDirective()`. The first is pretty clear. Here, we set to things: an array of allowed file types and a maximum size for each file that gets uploaded. For `maxSize` we do a calculation in the number of `bytes` allowed. For our example, we've set this equal to `1MB` or `1 byte` times `1024` times `1024`. For clarity, there are `1024` bytes in a kilobyte and `1024` kilobytes in a megabye. Math!
+
+Once our file restrictions are in place, we define our upload directive. Notice, this is where that `uploadToAmazonS3` name is coming from in all of our calls to `Slingshot`. We let Slingshot know that we want to use S3 storage (it supports [multiple services]()), and then we pass an options object. First, we pass the name of the bucket we set up earlier. Next, we have an option `acl` set to `public-read`. This value corresponds to something Amazon defines as a [canned ACL](http://docs.aws.amazon.com/AmazonS3/latest/dev/acl-overview.html#canned-acl), or pre-defined Access Control List. In Bezos Land™, an ACL defines _who_ can access our data and _how_. This is similar to our CORS configuration from earlier. As explained by Amazon:
+
+> Amazon S3 Access Control Lists (ACLs) enable you to manage access to buckets and objects. Each bucket and object has an ACL attached to it as a subresource. It defines which AWS accounts or groups are granted access and the type of access. When a request is received against a resource, Amazon S3 checks the corresponding ACL to verify the requester has the necessary access permissions.
+>
+> &mdash; via [Amazon ACL Overview](http://docs.aws.amazon.com/AmazonS3/latest/dev/acl-overview.html)
+
+This setting `public-read` is an pre-made ACL given to us by Amazon which specifies that "Owner gets `FULL_CONTROL`. The AllUsers group gets `READ` access." In other words, _we_ can do whatever we want to our bucket but our users and other third-parties can only _read_ content from it. Of course, we can get as specific as we'd like with this, defining our own ACLs and passing the names of those here instead. 
+
+Next, we have a method `authorize` which simply returns `true`. For simplicity sake we're automatically marking this action as "authorized," however, depending on your application you'd want to define some custom rules that more rigidly determine when `true` is returned, or, the upload is authorized (e.g. check if the user has some 
+
 ### Displaying files
 ### Configuring Amazon CloudFront
