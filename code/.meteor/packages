@@ -17,7 +17,11 @@ browser-policy
 meteorhacks:npm
 
 
-npm-container
 themeteorchef:bert
 meteorhacks:ssr
 fourseven:scss
+standard-minifiers
+
+
+npm-container
+edgee:slingshot
