@@ -505,7 +505,7 @@ Slingshot.createDirective( "uploadToAmazonS3", Slingshot.S3Storage, {
   acl: "public-read",
   authorize: function () {
     let userFileCount = Files.find( { "userId": this.userId } ).count();
-    return userFileCount < 3 ? true : false;
+    return userFileCount <> 3 ? true : false;
   },
   key: function ( file ) {
     var user = Meteor.users.findOne( this.userId );
@@ -513,6 +513,8 @@ Slingshot.createDirective( "uploadToAmazonS3", Slingshot.S3Storage, {
   }
 });
 ```
+
+<!-- REMOVE DIAMOND LESS THAN/GREATER THAN ABOVE TO GET AROUND SYNTAX HIGHLIGHTING -->
 
 Two methods to pay attention to: `Slingshot.fileRestrictions()` and `Slingshot.createDirective()`. The first is pretty clear. Here, we set to things: an array of allowed file types and a maximum size for each file that gets uploaded. For `maxSize` we do a calculation in the number of `bytes` allowed. For our example, we've set this equal to `1MB` or `1 byte` times `1024` times `1024`. For clarity, there are `1024` bytes in a kilobyte and `1024` kilobytes in a megabye. Math!
 
@@ -524,7 +526,105 @@ Once our file restrictions are in place, we define our upload directive. Notice,
 
 This setting `public-read` is an pre-made ACL given to us by Amazon which specifies that "Owner gets `FULL_CONTROL`. The AllUsers group gets `READ` access." In other words, _we_ can do whatever we want to our bucket but our users and other third-parties can only _read_ content from it. Of course, we can get as specific as we'd like with this, defining our own ACLs and passing the names of those here instead. 
 
-Next, we have a method `authorize` which simply returns `true`. For simplicity sake we're automatically marking this action as "authorized," however, depending on your application you'd want to define some custom rules that more rigidly determine when `true` is returned, or, the upload is authorized (e.g. check if the user has some 
+Next, we have a method `authorize` which returns `true` if the current user has less than `3` files uploaded and `false` if they have `3`. This is a simple example, but the idea here is that we can implement any logic we'd like to block uploads from happening. Here, we implement a simple max upload quota of `3` files, but you could get creative and check something like a user's subscription to see if they're allowed to upload more files. Up to you!
+
+Finally, we call a method `key` which takes a `file` argument equal to the file we've passed from the client. Here, `key` is used to return the name used for the location within the bucket where the file will be saved. Here, we've decided to namespace uploads based on the current user's email addres, so if we uploaded a file `corgi-flip.gif`, it would be added to a directory `email@email.com/corgi-flop.gif`. Cool! You can make this anything you'd like as long as it's a valid file structure.
+
+That's it! We're all conigured on the server, so now we can go back to the client to finish up our module.
+
+<p class="block-header">/client/modules/upload-to-amazon-s3.js</p>
+
+```javascript
+[...]
+
+let _uploadFileToAmazon = ( file ) => {
+  const uploader = new Slingshot.Upload( "uploadToAmazonS3" );
+
+  uploader.send( file, ( error, url ) => {
+    if ( error ) {
+      Bert.alert( error.message, "warning" );
+      _setPlaceholderText();
+    } else {
+      _addUrlToDatabase( url );
+    }
+  });
+};
+
+let upload = ( options ) => {
+  template = options.template;
+  let file = _getFileFromInput( options.event );
+
+  _setPlaceholderText( `Uploading ${file.name}...` );
+  _uploadFileToAmazon( file );
+};
+
+Modules.client.uploadToAmazonS3 = upload;
+```
+
+Back in our `_uploadFileToAmazon()` function, notice we pass a simple callback to our `uploader.send` call to handle our error and success states. If we have an error, we alert its `message` property to the client and reset the placeholder text on our uploader (remember, if we don't pass a string to this function, it gets assigned to the default value `"Click or Drag a File Here to Upload"`. On success, we call to one last function we need to define `_addUrlToDatabase()` passing the `url` (this is the URL of our file on Amazon S3). Let's take a look.
+
+<p class="block-header">/client/modules/upload-to-amazon-s3.js</p>
+
+```javascript
+[...]
+
+let _addUrlToDatabase = ( url ) => {
+  Meteor.call( "storeUrlInDatabase", url, ( error ) => {
+    if ( error ) {
+      Bert.alert( error.reason, "warning" );
+      _setPlaceholderText();
+    } else {
+      Bert.alert( "File uploaded to Amazon S3!", "success" );
+      _setPlaceholderText();
+    }
+  });
+};
+
+let _uploadFileToAmazon = ( file ) => {
+  [...]
+};
+
+let upload = ( options ) => {
+  template = options.template;
+  let file = _getFileFromInput( options.event );
+
+  _setPlaceholderText( `Uploading ${file.name}...` );
+  _uploadFileToAmazon( file );
+};
+
+Modules.client.uploadToAmazonS3 = upload;
+```
+
+Pretty simple. Inside we find a good ol' fashioned method call to a method we've defined on our server `storeUrlInDatabase`. At this point the callback on this should be pretty clear: an alert with the error and resetting the uploader text on error and the inverse on success. 
+
+This completes our `uploadToAmazonS3` module here on the client, so let's hop back up to the server to see how our `storeUrlInDatabase` method is working. Hint: it's pretty neat.
+
+### Storing Amazon URLs in the database
+At this point we have our files uploading to Amazon S3, however, we can't really _see_ them. In order to confirm—just beyond a success message—that our files have uploaded, we want to _store_ the URLs we get back from Amazon so we can display them back on the page for reference. To do this, we've setup a method that gets called _after_ we've successfully pushed a file to Amazon and have gotten back a URL for the file.
+
+<p class="block-header">/both/methods/insert/files.js</p>
+
+```javascript
+Meteor.methods({
+  storeUrlInDatabase: function( url ) {
+    check( url, String );
+    Modules.both.checkUrlValidity( url );
+
+    try {
+      Files.insert({
+        url: url,
+        userId: Meteor.userId(),
+        added: new Date() 
+      });
+    } catch( exception ) {
+      return exception;
+    }
+  }
+});
+```
+Simple. Here, we have a simple method setup to do a few things. First, we call a `check` on the URL we've passed to make it a string. Next, we call a new module `checkUrlValidity` passing our URL. Just beneath that, we do a `try/catch` and attempt to insert our file into the database, assigning it to the current user and giving it a date equal to "now." What is that `checkUrlValidity` module up to?
+
+#### The `checkUrlValidity` module
+
 
 ### Displaying files
-### Configuring Amazon CloudFront
