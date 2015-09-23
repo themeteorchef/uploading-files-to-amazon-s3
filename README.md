@@ -1,7 +1,7 @@
 ##### The Meteor Chef
 ###### \#013 - Uploading Files to Amazon S3
 
-In this recipe, we'll learn how to build an upload form for storing files on Amazon S3. We'll learn how to build the upload form, configure Amazon's bucket policy, and set up an Amazon CloudFront distribution to speed up the delivery of our files.
+In this recipe, we'll learn how to build an interface for uploading files to Amazon S3 using the edgee:slingshot package. We'll learn about getting an account setup on Amazon, configuring an S3 bucket, and figuring out how permissions work. We'll also learn how to organize our upload and validation processes using modules to make our code neat, tidy, and efficient.
 
 [Read on The Meteor Chef](http://themeteorchef.com/recipes/uploading-files-to-amazon-s3)  
 
