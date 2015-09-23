@@ -1,0 +1,11 @@
+{
+  "esnext": true,
+  "node": true,
+  "latedef": true,
+  "globals": {
+    "Meteor": false,
+    "Slingshot": false,
+    "Bert": false,
+    "Modules": false
+  }
+}

@@ -25,3 +25,5 @@ standard-minifiers
 
 npm-container
 edgee:slingshot
+ecmascript
+fortawesome:fontawesome

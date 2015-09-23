@@ -5,18 +5,14 @@
 
 Router.route('index', {
   path: '/',
-  template: 'index',
-  subscriptions: function(){
-    return Meteor.subscribe('examplePublication');
-    /* 
-    return [
-      Meteor.subscribe('examplePublication'),
-      Meteor.subscribe('examplePublication2')
-    ];
-    */
-  },
+  template: 'index'
+});
+
+Router.route( 'upload', {
+  path: '/upload',
+  template: 'upload',
   onBeforeAction: function(){
-    // Code to run before route goes here.
+    Session.set( "currentRoute", "upload" );
     this.next();
   }
 });

@@ -29,7 +29,7 @@ checkUserLoggedIn = function(){
 
 userAuthenticated = function(){
   if( !Meteor.loggingIn() && Meteor.user() ){
-    Router.go('/');
+    Router.go('/upload');
   } else {
     this.next();
   }
