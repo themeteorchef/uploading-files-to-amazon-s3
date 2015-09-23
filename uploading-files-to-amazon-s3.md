@@ -6,21 +6,21 @@ To get started, we need to add a few packages.
 ```bash
 meteor add ecmascript 
 ```
-This recipe will be written using the latest version of the JavaScript language, ES2015, which Meteor introduced support for in version 1.2. **Note**: this is normally included by default when creating a new project, however, because our code is based on [Base](https://github.com/themeteorchef/base)—which doesn't yet support Meteor 1.2—we need to add this package explicitly here.
+This recipe will be written using the latest version of the JavaScript language, [ES2015](https://babeljs.io/docs/learn-es2015/), which Meteor [introduced support for in version 1.2](http://info.meteor.com/blog/announcing-meteor-1.2). **Note**: this is normally included by default when creating a new project, however, because our code is based on [Base](https://github.com/themeteorchef/base)—which doesn't yet support Meteor 1.2—we need to add this package explicitly here.
 
 <p class="block-header">Terminal</p>
 
 ```bash
 meteor add edgee:slingshot
 ```
-To send our files to Amazon S3, we'll rely on the [`edgee:slingshot`](atmospherejs.com/edgee/slingshot) package. This will give us access to a simple API for uploading files without the need to muck around with the Amazon SDK directly.
+To send our files to Amazon S3, we'll rely on the [`edgee:slingshot`](https://atmospherejs.com/edgee/slingshot) package. This will give us access to a simple API for uploading files without the need to muck around with the Amazon SDK directly.
 
 <p class="block-header">Terminal</p>
 
 ```bash
 meteor add fortawesome:fontawesome
 ```
-Purely optional, we'll use the [`fortawesome:fontawesome`](atmospherejs.com/fortawesome/fontawesome) package to give us some icons to spruce up our user interface.
+Purely optional, we'll use the [`fortawesome:fontawesome`](https://atmospherejs.com/fortawesome/fontawesome) package to give us some icons to spruce up our user interface.
 
 <div class="note">
   <h3>Additional Packages <i class="fa fa-warning"></i></h3>
@@ -30,11 +30,11 @@ Purely optional, we'll use the [`fortawesome:fontawesome`](atmospherejs.com/fort
 ### What are we building?
 When we're building our applications, we generally store our static assets like images, documents, and other content in our `/public` folder. For development purposes and smaller applications this is fine, but when we go into production, this can produce unintended consequences in respect to the performance of our application. 
 
-To get around this, we can rely on [cloud services]() like [Amazon S3]() to store our static files _for us_. The reason we choose to do this instead of storing our files locally has to do with resources. Every time a user loads up our app, if we display a static asset on screen—for example, an image—our application has to handle loading that asset directly. 
+To get around this, we can rely on [cloud services](http://themeteorchef.com/blog/managing-static-content/#tmc-cloud-services) like [Amazon S3](http://themeteorchef.com/blog/managing-static-content/#tmc-amazon-s3) to store our static files _for us_. The reason we choose to do this instead of storing our files locally has to do with resources. Every time a user loads up our app, if we display a static asset on screen—for example, an image—our application has to handle loading that asset directly. 
 
-This means that not only is our application having to load up our templates, logic, and other code, but it's also having to serve up images. This can produce bottlenecks in respect to CPU and memory usage. By using a service like Amazon S3, we can offset the "cost" of this by relying on their servers and bandwidth to do the bulk of the work on our behalf.
+This means that not only is our application having to load up our templates, logic, and other code, but it's also having to serve up images. This can produce bottlenecks in respect to CPU, memory, and bandwidth usage. By using a service like Amazon S3, we can offset the cost of this by relying on their servers and bandwidth to do the bulk of the work on our behalf.
 
-Another reason using a service like Amazon S3 is important is availability. Our server (and its instances) can only live in one or a few regions at once. This means that if our server "lives" in Chicago and we have users trying to access it from London, those users requests—and our response—have to travel that distance in order for content to be loaded. When it comes to static files, specifically, this can me waiting several seconds (or longer depending on connection speed) for a file to load up. 
+Another reason using a service like Amazon S3 is important is availability. Our server (and its instances) can only live in one or a few regions at once. This means that if our server "lives" in Chicago and we have users trying to access it from London, those users requests—and our response—have to travel that distance in order for content to be loaded. When it comes to static files, specifically, this can mean waiting several seconds (or longer depending on connection speed) for a file to load up. 
 
 Using Amazon, we can rely on their massive network and pool of resources to speed this process up and make our files available in areas closer to our users.
 
@@ -64,7 +64,7 @@ Before we dig into writing code, we should get everything we need from Amazon in
 Once these are in place, we'll be able to implement our uploading interface much quicker. First, let's hop over to Amazon and set up an account.
 
 #### Getting an account
-It's highly likely that you already have an Amazon account set up for personal purchases, but for managing services like S3, it's best if we create a separate account. Nothing _bad_ will happen, but if you're working with other people and they need access to your account, you wouldn't want them seeing your recent purchase of the [Saved by the Bell: The New Class](https://www.youtube.com/watch?v=TEFcfFUJVuk) box set, would you?
+It's highly likely that you already have an Amazon account set up for personal purchases, but for managing services like S3, it's best if we create a separate account. Nothing _bad_ will happen if you don't create a separate account. But, if you're working with other people and they need access to your account, you wouldn't want them seeing your recent purchase of the [Saved by the Bell: The New Class](https://www.youtube.com/watch?v=TEFcfFUJVuk) box set, would you? Sorry, Robert Sutherland Telfer, you can't replace Zack Morris.
 
 <figure>
   <img src="http://cl.ly/image/2b3o0C1L2e2l/Image%202015-09-22%20at%202.38.38%20PM.png" alt="Entering payment information on Amazon. No such thing as a free lunch, eh Bezos?">
@@ -73,31 +73,26 @@ It's highly likely that you already have an Amazon account set up for personal p
 
 [Head over to this link](https://console.aws.amazon.com/console/home) and pop in a name, email, and password to get up and running. **Keep in mind, Amazon _will_ make you enter some contact and payment information during this process**. As they'll explain, you _do_ get one year of free service which will get you up to 5GB of free storage, 20,000 GET requests (users loading files), and 2,000 PUT requests (us uploading files). After one year, or, after you've used up these resources, Amazon will charge you for usage.
 
-After this is setup, you will need to verify your identity. If you're trying to score a date for tonight—you too, ladies—this will make you look like a top secret spy. Put your phone on speaker phone while the Amazon robot calls you to verify your identity and watch your romantic interests' eyes _light up_. You're welcome.
+After this is setup, you will need to verify your identity. If you're trying to score a date for tonight—you too, ladies—this will make you look like a top secret spy. Put your phone on speaker while the Amazon robot calls you to verify your identity and watch your romantic interests' eyes _light up_. You're welcome.
 
 Okay! Once this is set up you will be asked to jump through a few more hoops and then signing in with your new account, you will _finally_ be given access to the AWS dashboard. Don't blame me. [Blame hackers](https://youtu.be/m97Ia9cflPQ?t=1m2s).
 
 #### Setting up an Amazon S3 bucket
-Okay, now for what we actually care about! After a bit of Where's Waldo, find [the S3 option in the Amazon AWS Dashboard](https://console.aws.amazon.com/s3/home). Once you're here, you will be prompted to create a bucket. This is what we're after. Click that big blue button "Create Bucket" to get started.
+Okay, now for what we actually care about! After a bit of Where's Waldo, find [the S3 option in the Amazon AWS Dashboard](https://console.aws.amazon.com/s3/home). Once you're here, you will be prompted to create a bucket. This is what we're after. Click that big blue "Create Bucket" button to get started.
 
 <figure>
   <img src="http://cl.ly/image/28112X0J2E0b/Image%202015-09-22%20at%202.55.17%20PM.png" alt="Setting up a new bucket on Amazon S3.">
   <figcaption>Setting up a new bucket on Amazon S3.</figcaption>
 </figure>
 
-We need to pay attention here. First, our `Bucket Name` can only contain lowercase characters and hypens (perhaps more, but I was too lazy to test out all of Amazon's validations). This should be something that we can easily recognize later. Our "bucket" is the place where all of our uploads will live, so it's important to make this descriptive. For example, `myapp-photos` will make it clear that the bucket is for your application's photos later.
+We need to pay attention here. First, our `Bucket Name` can only contain lowercase characters and hypens (perhaps more, but I was too lazy to test out all of Amazon's validations). This should be something that we can easily recognize later. Our "bucket" is the place where all of our uploads will live, so it's important to make this descriptive. For example, `myapp-photos` will make it clear that the bucket is for your application's photos feature later.
 
 Next, we need to select a _region_. A region is the location where our bucket will be hosted in respect to Amazon's servers. This is **really important**. You want to select the location from the list that's closest to both you and the majority of your users geographically (on the map). For example, TMC is just outside of Chicago, so the region of choice would be US Standard (which, anecodtally, defaults to Oregon). If you're in the Philippines, you'd probably be best choosing Singapore, Tokyo, or Sydney.
-
-<div class="note success">
-  <h3>This is it? <i class="fa fa-thumbs-up"></i></h3>
-  <p>Don't worry, we'll learn how to make our content available in multiple regions later when we learn about Amazon CloudFront. Hang tight!</p>
-</div>
 
 Once this is done, you will have a shiny new bucket to store your files in! Yay? Yay! Next, we need to fast forward a bit and configure our bucket's CORS policy. Let's take a look.
 
 #### Adding a CORS policy to our bucket
-CORS stands for Cross Origin Resource Sharing and defines a standard for how applications communicate with and allow interactions between one another on the web. Said another way, this is the web's version of a contract between us and the resource we—or our users—are trying to access. In the context of Amazon S3, we need to define a CORS policy that explains _how_ our bucket can be accessed and from where. 
+CORS stands for [Cross Origin Resource Sharing](https://en.wikipedia.org/wiki/Cross-origin_resource_sharing) and defines a standard for how websites and applications communicate with and allow interactions between one another on the web. Said another way, this is the web's version of a contract between us and the resource we—or our users—are trying to access. In the context of Amazon S3, we need to define a CORS policy that explains _how_ our bucket can be accessed and from _where_. 
 
 While we won't be working with any code from the package just yet, the `edgee:slingshot` package's documentation instructs us to define our CORS policy as follows:
 
@@ -127,7 +122,7 @@ XML?! Breathe. To get this added, we need to click on our bucket's name in our l
 
 Um, okay. Got it! But what the heck does this mean? Remember that CORS is like a contract specific to the web. More specifically, CORS allows us to define how resources are shared using HTTP requests on the web. When we're interacting with content on the web—or inside of our bucket—we're doing so using HTTP requests (even if they're obscured by fancy JavaScript APIs). Using CORS, we can define what _types_ of requests we allow and _where_ those requests can originate from. 
 
-In this snippet, we're saying that you're allowed to make `PUT`, `POST`, `GET`, and `HEAD` requests on our bucket from any origin domain (e.g. `http://locahost:300`, or, `http://app.com`), and include any [HTTP headers]() that you'd like. WHAT?! Doesn't this essentially open our bucket up to the world? Good question. It _would_ if behind the scenes Amazon didn't have any security beyond this in place, but let's be serious: Bezos ain't got time for that.
+In this snippet, we're saying that you're allowed to make `PUT`, `POST`, `GET`, and `HEAD` requests on our bucket from any origin domain (e.g. `http://locahost:300`, or, `http://app.com`), and include any [HTTP headers](https://en.wikipedia.org/wiki/List_of_HTTP_header_fields) that you'd like. WHAT?! Doesn't this essentially open our bucket up to the world? Good question. It _would_ if behind the scenes Amazon didn't have any security beyond this in place, but let's be serious: Bezos ain't got time for that.
 
 ![Jeff Bezos evil laugh](http://cl.ly/image/0y422f3u3b2r/bXs4mMS.png)
 
@@ -141,7 +136,7 @@ To prevent unwanted requests like this, Amazon gives us access keys (fancy API k
 Once this is saved, we can grab our access keys and get those set up in our application. Let's take a look.
 
 #### Setting up our access keys
-It's important to point out that _how_ we're getting access keys is going against the grain a bit (on purpose). If we navigation over to the [security credentials]() portion of our AWS dashboard, we'll see a lot of chatter about something called IAM users. What are those? IAM users are an Amazon convention for defining user profiles that can have different sets of permissions assigned to them. For example, say we had a clubhouse in our backyard and gave each of our friend's passes to get in. We may have IAM users like:
+It's important to point out that _how_ we're getting access keys is going against the grain a bit (on purpose). If we navigation over to the [security credentials](https://console.aws.amazon.com/iam/home#security_credential) portion of our AWS dashboard, we'll see a lot of chatter about something called IAM users. What are those? [IAM users](https://aws.amazon.com/iam/) are an Amazon convention for defining user profiles that can have different sets of permissions assigned to them. For example, say we had a clubhouse in our backyard and gave each of our friend's passes to get in. We may have IAM users like:
 
 <table>
   <thead>
@@ -246,7 +241,7 @@ Pretty straightforward. Here, we simply give our page a title and then add an in
   </div>
 </template>
 ```
-Simple as well! Nice! Here, we've created a long "bar" interface where users can either click to add files, or, drag and drop their files. We're not doing anything special for the drag and drop here. We're getting this for free in browsers that support it. As a fallback, we have a vanilla `file` input. To make this not look totally apalling, we've added a bit of CSS to make our input stretch across are click/drop zone invisibly. For reference, here's the CSS to do it:
+Simple as well! Nice! Here, we've created a long "bar" interface where users can either click to add files, or, drag and drop their files. We're not doing anything special for the drag and drop here. We're getting this for free in browsers that support it. As a fallback, we have a vanilla `file` input. To make this not look totally apalling, we've added a bit of CSS to make our input stretch across our click/drop zone invisibly. For reference, here's the CSS to do it:
 
 <p class="block-header">/client/stylesheets/components/_upload.scss</p>
 
@@ -377,7 +372,7 @@ let upload = ( options ) => {
 Modules.client.uploadToAmazonS3 = upload;
 ```
 
-Better? Here, we're defining our `template` variable using `let` ([an ES2015 convention]() for defining mutable variables). To make sure our `template` variable is accessible throughout our module, we move its definition outside of our function. Using `let`, our variable is scoped to the parent block, meaning, if we defined it inside of our `upload` function, the functions we add later wouldn't be able to access it. Again, hang in there, this will make sense in a bit.
+Better? Here, we're defining our `template` variable using `let` ([an ES2015 convention](http://themeteorchef.com/blog/what-is-es2015/#tmc-let-const) for defining mutable variables). To make sure our `template` variable is accessible throughout our module, we move its definition outside of our function. Using `let`, our variable is scoped to the parent block, meaning, if we defined it inside of our `upload` function, the functions we add later wouldn't be able to access it. Again, hang in there, this will make sense in a bit.
 
 Next, we assign a new variable `file` equal to the response of a function `_getFileFromInput()`. Just like our `template` variable, we're going to define this function just above our `upload` function. Here's how it looks:
 
@@ -397,7 +392,7 @@ let upload = ( options ) => {
 Modules.client.uploadToAmazonS3 = upload;
 ```
 
-It's pretty simple. Just a one-liner. The purpose of this function is to take the change event from our file input and grab the information about the file our user selected. Here, we use ES2015 expression syntax to shorten up our code a bit. Remember, we can use this when our functions only contain a single line. Using this, we get an explicit return (meaning we can omit `return` from our definition). To be clear, when this is called, here's what we're getting back:
+It's pretty simple. Just a one-liner. The purpose of this function is to take the change event from our file input and grab the information about the file our user selected. Here, we use ES2015 [expression syntax](http://themeteorchef.com/blog/what-is-es2015/#tmc-statement-and-expression-bodies) to shorten up our code a bit. Remember, we can use this when our functions only contain a single line. Using this, we get an explicit return (meaning we can omit `return` from our definition). To be clear, when this is called, here's what we're getting back:
 
 ```javascript
 {
@@ -414,7 +409,7 @@ What is this mumbo jumbo? This is the information about the file currently assig
 
 <div class="note info">
   <h3>What's with the underscore in front? <i class="fa fa-info"></i></h3>
-  <p>This is a convention used in web development denote a <em>private</em> variable. It doesn't do anything special (the underscore isn't recognized by JavaScript). This is purely an identifier for developers to understand which functions are meant to be just for the current file and which can be exported or made global.</p>
+  <p>This is a convention used in web development to denote a <em>private</em> variable. It doesn't do anything special (the underscore isn't recognized by JavaScript). This is purely an identifier for developers to understand which functions are meant to be just for the current file and which can be exported or made global.</p>
 </div>
 
 <p class="block-header">/client/modules/upload-to-amazon-s3.js</p>
@@ -455,7 +450,7 @@ let upload = ( options ) => {
 Modules.client.uploadToAmazonS3 = upload;
 ```
 
-Okay! Now we're making a little more sense here. First, notice that we're passing a string to this function <code>Uploading ${file.name}...</code>. Here, we're using ES2015's [template strings]() feature to pass a variable directly to our string (in this case, the name of the file selected in our input, or, `corgi-flop.gif`). In our function definition, we're using _another_ feature of ES2015, argument defaults, to say "if we don't pass a string when calling `setPlaceholderText()`, set the value of the `string` argument to 'Click or Draf a File Here to Upload.'"
+Okay! Now we're making a little more sense here. First, notice that we're passing a string to this function <code>Uploading ${file.name}...</code>. Here, we're using ES2015's [template strings](http://themeteorchef.com/blog/what-is-es2015/#tmc-template-strings) feature to pass a variable directly to our string (in this case, the name of the file selected in our input, or, `corgi-flop.gif`). In our function definition, we're using _another_ feature of ES2015, [argument defaults](https://babeljs.io/docs/learn-es2015/#default-rest-spread), to say "if we don't pass a string when calling `setPlaceholderText()`, set the value of the `string` argument to 'Click or Drag a File Here to Upload.'"
 
 Once we have a value for `string`, we make use of the `template` variable we set up a little bit ago (this is assigned to the value of the template instance where the change event happened on our input), attempting to find the `.alert span` element and setting its `innerText` property equal to our string. Phew! This should be starting to make a little more sense. For each explicit task involved in uploading our file, we break it off into its own function. First we grabbed the file from our input, now we're setting the placeholder text.
 
@@ -510,7 +505,7 @@ Slingshot.createDirective( "uploadToAmazonS3", Slingshot.S3Storage, {
   acl: "public-read",
   authorize: function () {
     let userFileCount = Files.find( { "userId": this.userId } ).count();
-    return userFileCount <> 3 ? true : false;
+    return userFileCount < 3 ? true : false;
   },
   key: function ( file ) {
     var user = Meteor.users.findOne( this.userId );
@@ -519,21 +514,26 @@ Slingshot.createDirective( "uploadToAmazonS3", Slingshot.S3Storage, {
 });
 ```
 
-<!-- REMOVE DIAMOND LESS THAN/GREATER THAN ABOVE TO GET AROUND SYNTAX HIGHLIGHTING -->
+<!-- comment -->
 
-Two methods to pay attention to: `Slingshot.fileRestrictions()` and `Slingshot.createDirective()`. The first is pretty clear. Here, we set to things: an array of allowed file types and a maximum size for each file that gets uploaded. For `maxSize` we do a calculation in the number of `bytes` allowed. For our example, we've set this equal to `1MB` or `1 byte` times `1024` times `1024`. For clarity, there are `1024` bytes in a kilobyte and `1024` kilobytes in a megabye. Math!
+Two methods to pay attention to: `Slingshot.fileRestrictions()` and `Slingshot.createDirective()`. The first is pretty clear. Here, we set to things: an array of allowed file types and a maximum size for each file that gets uploaded. For `maxSize` we do a calculation on the number of `bytes` allowed. For our example, we've set this equal to `1MB` or `1 byte` times `1024` times `1024`. For clarity, there are `1024` bytes in a kilobyte and `1024` kilobytes in a megabye. Math!
 
-Once our file restrictions are in place, we define our upload directive. Notice, this is where that `uploadToAmazonS3` name is coming from in all of our calls to `Slingshot`. We let Slingshot know that we want to use S3 storage (it supports [multiple services]()), and then we pass an options object. First, we pass the name of the bucket we set up earlier. Next, we have an option `acl` set to `public-read`. This value corresponds to something Amazon defines as a [canned ACL](http://docs.aws.amazon.com/AmazonS3/latest/dev/acl-overview.html#canned-acl), or pre-defined Access Control List. In Bezos Land™, an ACL defines _who_ can access our data and _how_. This is similar to our CORS configuration from earlier. As explained by Amazon:
+Once our file restrictions are in place, we define our upload directive. Notice, this is where that `uploadToAmazonS3` name is coming from in all of our calls to `Slingshot`. We let Slingshot know that we want to use S3 storage (it supports [multiple services](https://github.com/CulturalMe/meteor-slingshot/#storage-services)), and then we pass an options object. First, we pass the name of the bucket we set up earlier. Next, we have an option `acl` set to `public-read`. This value corresponds to something Amazon defines as a [canned ACL](http://docs.aws.amazon.com/AmazonS3/latest/dev/acl-overview.html#canned-acl), or pre-defined Access Control List. In Bezos Land™, an ACL defines _who_ can access our data and _how_. This is similar to our CORS configuration from earlier. As explained by Amazon:
 
 > Amazon S3 Access Control Lists (ACLs) enable you to manage access to buckets and objects. Each bucket and object has an ACL attached to it as a subresource. It defines which AWS accounts or groups are granted access and the type of access. When a request is received against a resource, Amazon S3 checks the corresponding ACL to verify the requester has the necessary access permissions.
 >
 > &mdash; via [Amazon ACL Overview](http://docs.aws.amazon.com/AmazonS3/latest/dev/acl-overview.html)
 
-This setting `public-read` is an pre-made ACL given to us by Amazon which specifies that "Owner gets `FULL_CONTROL`. The AllUsers group gets `READ` access." In other words, _we_ can do whatever we want to our bucket but our users and other third-parties can only _read_ content from it. Of course, we can get as specific as we'd like with this, defining our own ACLs and passing the names of those here instead. 
+This setting `public-read` is [a pre-made ACL](http://docs.aws.amazon.com/AmazonS3/latest/dev/acl-overview.html#canned-acl) given to us by Amazon which specifies that "Owner gets `FULL_CONTROL`. The AllUsers group gets `READ` access." In other words, _we_ can do whatever we want to our bucket but our users and other third-parties can only _read_ content from it. Of course, we can get as specific as we'd like with this, [defining our own ACLs](http://docs.aws.amazon.com/AmazonS3/latest/dev/manage-acls-using-console.html) and passing the names of those here instead. 
 
-Next, we have a method `authorize` which returns `true` if the current user has less than `3` files uploaded and `false` if they have `3`. This is a simple example, but the idea here is that we can implement any logic we'd like to block uploads from happening. Here, we implement a simple max upload quota of `3` files, but you could get creative and check something like a user's subscription to see if they're allowed to upload more files. Up to you!
+Next, we have a method `authorize` which returns `true` if the current user has less than `3` files uploaded and `false` if they already have `3`. This is a simple example, but the idea here is that we can implement any logic we'd like to block uploads from happening. Here, we implement a simple max upload quota of `3` files, but you could get creative and check something like a user's subscription to see if they're allowed to upload more files. Up to you!
 
 Finally, we call a method `key` which takes a `file` argument equal to the file we've passed from the client. Here, `key` is used to return the name used for the location within the bucket where the file will be saved. Here, we've decided to namespace uploads based on the current user's email addres, so if we uploaded a file `corgi-flip.gif`, it would be added to a directory `email@email.com/corgi-flop.gif`. Cool! You can make this anything you'd like as long as it's a valid file structure.
+
+<div class="note info">
+  <h3>Where are our access keys? <i class="fa fa-info"></i></h3>
+  <p>Remeber when we set our access keys inside of our <code>settings-development.json</code> file earlier and mentioned starting our server with this in tow? Well, behind the scenes, the <code>edgee:slingshot</code> package knows to look in our settings file for the values we specified. To make this all work, they take our keys and generate an Amazon <a href="http://docs.aws.amazon.com/IAM/latest/UserGuide/id_credentials_temp.html">Session Token</a> to remove the need to send our keys over the wire to Amazon.</p>
+</div>
 
 That's it! We're all conigured on the server, so now we can go back to the client to finish up our module.
 
@@ -630,7 +630,7 @@ Meteor.methods({
 Simple. Here, we have a simple method setup to do a few things. First, we call a `check` on the URL we've passed to make it a string. Next, we call a new module `checkUrlValidity` passing our URL. Just beneath that, we do a `try/catch` and attempt to insert our file into the database, assigning it to the current user and giving it a date equal to "now." What is that `checkUrlValidity` module up to?
 
 #### The `checkUrlValidity` module
-Before we clear our URLs to be inserted into our database, we need to make one last stop. Technically this is a mix of paranoia and security. We want to confirm two things: does this URL already exist in the database, and, is this URL a URL from Amazon. Since we did a deep dive on the `uploadToAmazonS3` module, we're going to just dump this one out and step through the high-level concepts.
+Before we clear our URLs to be inserted into our database, we need to make one last stop. Technically this is a mix of paranoia and security. We want to confirm two things: does this URL already exist in the database, and, is this URL a URL from Amazon? Since we did a deep dive on the `uploadToAmazonS3` module, we're going to just dump this one out and step through the high-level concepts.
 
 <p class="block-header">/both/modules/check-url-validity.js</p>
 
@@ -682,7 +682,7 @@ This one is simple, but important for preventing unwanted data from getting into
 Okay. Last step. We've got our files on Amazon and in our database, now, we just need to get them on the template.
 
 ### Displaying files
-This one is pretty easy. We need to do two things: setup a publication for our data to get it on the client and then setup a template and some logic to output that data.
+This one is pretty easy. We need to do two things: [set up a publication](http://themeteorchef.com/snippets/publication-and-subscription-patterns/#tmc-publications) for our data to get it on the client and then setup a template and some logic to output that data.
 
 <p class="block-header">/server/publications/files.js</p>
 
@@ -697,7 +697,7 @@ Meteor.publish( 'files', function(){
   return this.ready();
 });
 ```
-Very simple. We simple make a call on our `Files` collection, finding all of the items where the `userId` field matches the ID of the currently logged in user (we can retrieve this within our publication using `this.userId` as a convenience baked into Meteor).
+Very simple. We make a call on our `Files` collection, finding all of the items where the `userId` field matches the ID of the currently logged in user (we can retrieve this within our publication using `this.userId` as a convenience baked into Meteor).
 
 Next, we need to update our `upload` template from earlier to include a new template for displaying our files:
 
@@ -727,7 +727,7 @@ Cool. Pretty easy. We're just going to display our list of files beneath our upl
 </template>
 ```
 
-Also simple. Here, we setup an `{{#each}}` block tied to a helper `files`. If we have files, we output the `{{> file}}` template, and if not, we display a warning message. Let's look at the logic for that `files` template.
+Also simple. Here, we setup an `{{#each}}` block tied to a helper `files`. If we have files, we output the `{{> file}}` template, and if not, we display a warning message. Let's look at the logic for this `files` template.
 
 <p class="block-header">/client/templates/authenticated/files.js</p>
 
@@ -744,9 +744,9 @@ Template.files.helpers({
 });
 ```
 
-Two things happening here. First, we subscribe to our `files` publication we just setup using that nifty [expression syntax]() added in ES2015. Notice, because we're using the Arrow syntax meaning our scope is set to _outside_ of the current function, we add our subscription to our template using `Template.instance().subscribe()` instead of `this.subscribe()`. The two are equal, but this helps us get around the scoping issue while keeping the clean syntax (and arguably makes this a little clearer).
+Two things happening here. First, we subscribe to our `files` publication we just setup using that nifty [expression syntax](http://themeteorchef.com/blog/what-is-es2015/#tmc-statement-and-expression-bodies) added in ES2015. Notice, because we're using the Arrow syntax meaning our scope is set to _outside_ of the current function, we add our subscription to our template using `Template.instance().subscribe()` instead of `this.subscribe()`. The two are equal, but this helps us get around the scoping issue while keeping the clean syntax (and arguably makes this a little clearer).
 
-Next, we setup a simple `files()` helper return all of the files published to the client (remember, our publication is only sending down files owned by our current user so no need to filter again), sorting those items based on the date `added` field in reverse chronological order (most recent to oldest). Almost there! One last step, our `file` template.
+Next, we setup a simple `files()` helper to return all of the files published to the client (remember, our publication is only sending down files owned by our current user so no need to filter again), sorting those items based on the date `added` field in reverse chronological order (most recent to oldest). Almost there! One last step, our `file` template.
 
 <p class="block-header">/client/templates/authenticated/file.html</p>
 
@@ -781,9 +781,9 @@ Template.file.helpers({
 
 Here, we take the URL passed as the argument to our `{{#if}}` block and make use of the Underscore [`_.find()`](http://underscorejs.org/#find) method to loop over an array of file formats. Inside of our `find()`, we test our URL to see if it contains the format, returning `true` if it does and `false` otherwise. 
 
-If it's not clear, the goal of this helper allows us to determine at the template level whether or not the file we're trying to show is in image. If it is, we want to display a thumbnail of that image. If it isn't, we show our placeholder icon instead!
+If it's not clear, the goal of this helper allows us to determine at the template level whether or not the file we're trying to show is an image. If it is, we want to display a thumbnail of that image. If it isn't, we show our placeholder icon instead!
 
 Drumroll please...we're done! We have a complete solution for uploading files to Amazon S3 and getting a preview of items uploaded in our application. Job well done.
 
 ### Wrap Up &amp; Summary
-In this recipe, we learned how to upload files to Amazon S3 using the [edgee:slingshot]() package. We learned how to get an account on Amazon and configure a bucket in their S3 service, setup CORS configuration, and wrapped our head around the access control list concept. We also took a close look at using a module pattern for organizing our code when performing tasks involing multiple steps.
+In this recipe, we learned how to upload files to Amazon S3 using the [edgee:slingshot](https://atmospherejs.com/edgee/slingshot) package. We learned how to get an account on Amazon and configure a bucket in their S3 service, setup CORS configuration, and wrapped our head around the access control list concept. We also took a close look at using a module pattern for organizing our code when performing tasks involing multiple steps.
