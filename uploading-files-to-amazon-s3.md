@@ -412,6 +412,11 @@ It's pretty simple. Just a one-liner. The purpose of this function is to take th
 ```
 What is this mumbo jumbo? This is the information about the file currently assigned to our file input, or, the file the user selected. As we'll see in a bit, this is what we'll pass to our uploader function to push our file to Amazon. We grab this inside of our `_getFileFromInput()` function because we'll need to access this value more than once in our module.
 
+<div class="note info">
+  <h3>What's with the underscore in front? <i class="fa fa-info"></i></h3>
+  <p>This is a convention used in web development denote a <em>private</em> variable. It doesn't do anything special (the underscore isn't recognized by JavaScript). This is purely an identifier for developers to understand which functions are meant to be just for the current file and which can be exported or made global.</p>
+</div>
+
 <p class="block-header">/client/modules/upload-to-amazon-s3.js</p>
 
 ```javascript
@@ -625,6 +630,160 @@ Meteor.methods({
 Simple. Here, we have a simple method setup to do a few things. First, we call a `check` on the URL we've passed to make it a string. Next, we call a new module `checkUrlValidity` passing our URL. Just beneath that, we do a `try/catch` and attempt to insert our file into the database, assigning it to the current user and giving it a date equal to "now." What is that `checkUrlValidity` module up to?
 
 #### The `checkUrlValidity` module
+Before we clear our URLs to be inserted into our database, we need to make one last stop. Technically this is a mix of paranoia and security. We want to confirm two things: does this URL already exist in the database, and, is this URL a URL from Amazon. Since we did a deep dive on the `uploadToAmazonS3` module, we're going to just dump this one out and step through the high-level concepts.
 
+<p class="block-header">/both/modules/check-url-validity.js</p>
+
+```javascript
+let _fileExistsInDatabase = ( url ) => {
+  return Files.findOne( { "url": url, "userId": Meteor.userId() }, { fields: { "_id": 1 } } );
+};
+
+let _isNotAmazonUrl = ( url ) => {
+  return ( url.indexOf( 's3.amazonaws.com' ) < 0 );
+};
+
+let _validateUrl = ( url ) => {
+  if ( _fileExistsInDatabase( url ) ) {
+    return { valid: false, error: "Sorry, this file already exists!" };
+  }
+
+  if ( _isNotAmazonUrl( url ) ) {
+    return { valid: false, error: "Sorry, this isn't a valid URL!" };
+  }
+
+  return { valid: true };
+};
+
+let validate = ( url ) => {
+  let test = _validateUrl( url );
+
+  if ( !test.valid ) {
+    throw new Meteor.Error( "file-error", test.error );
+  }
+};
+
+Modules.both.checkUrlValidity = validate;
+```
+Here, we've broken up validating our URL into three discrete tasks:
+
+1. Checking whether the URL exists in our database.
+2. Checking whether the URL is from Amazon.
+3. Returning an error message to throw if #1 or #2 fail.
+
+The meat of our module is in the `_validateUrl()` function where we first check if the file already exists in the database. If it does, we return an object with a `valid` property set to false and an `error` message that explains the file already exists. 
+
+Following this pattern, we perform an additional check to see if the URL contains `s3.amazonaws.com`, meaning, the URL is from Amazon. We do this here as a "paranoia" check to make sure that someone hasn't attempted to insert a URL into our database from the client by calling our `storeUrlInDatabase` method and passing a bogus URL.
+
+Cool! As we can see, back in our main `validate` function (the one we're assigning our `checkUrlValidity` namespace to), if we return an object where the `valid` property is false, we throw an error using `Meteor.Error`, passing the message assigned to the object in our `_validateUrl` function. Wow!
+
+This one is simple, but important for preventing unwanted data from getting into our database. Because we've built this using a module pattern, if we think of additional validations in the future, we can snap them in without a lot of trouble. Sweet!
+
+Okay. Last step. We've got our files on Amazon and in our database, now, we just need to get them on the template.
 
 ### Displaying files
+This one is pretty easy. We need to do two things: setup a publication for our data to get it on the client and then setup a template and some logic to output that data.
+
+<p class="block-header">/server/publications/files.js</p>
+
+```javascript
+Meteor.publish( 'files', function(){
+  var data = Files.find( { "userId": this.userId } );
+
+  if ( data ) {
+    return data;
+  }
+
+  return this.ready();
+});
+```
+Very simple. We simple make a call on our `Files` collection, finding all of the items where the `userId` field matches the ID of the currently logged in user (we can retrieve this within our publication using `this.userId` as a convenience baked into Meteor).
+
+Next, we need to update our `upload` template from earlier to include a new template for displaying our files:
+
+<p class="block-header">/client/templates/authenticated/upload.html</p>
+
+```markup
+<template name="upload">
+  <h4 class="page-header">Upload a File to Amazon S3</h4>
+  {{> uploader}}
+  {{> files}}
+</template>
+```
+
+Cool. Pretty easy. We're just going to display our list of files beneath our uploader input. Next, we need to get the `files` template setup.
+
+<p class="block-header">/client/templates/authenticated/files.html</p>
+
+```markup
+<template name="files">
+  <div class="files">
+    {{#each files}}
+      {{> file}}
+    {{else}}
+      <p class="alert alert-warning">No files uploaded yet!</p>
+    {{/each}}
+  </div>
+</template>
+```
+
+Also simple. Here, we setup an `{{#each}}` block tied to a helper `files`. If we have files, we output the `{{> file}}` template, and if not, we display a warning message. Let's look at the logic for that `files` template.
+
+<p class="block-header">/client/templates/authenticated/files.js</p>
+
+```javascript
+Template.files.onCreated( () => Template.instance().subscribe( 'files' ) );
+
+Template.files.helpers({
+  files() {
+    var files = Files.find( {}, { sort: { "added": -1 } } );
+    if ( files ) {
+      return files;
+    }
+  }
+});
+```
+
+Two things happening here. First, we subscribe to our `files` publication we just setup using that nifty [expression syntax]() added in ES2015. Notice, because we're using the Arrow syntax meaning our scope is set to _outside_ of the current function, we add our subscription to our template using `Template.instance().subscribe()` instead of `this.subscribe()`. The two are equal, but this helps us get around the scoping issue while keeping the clean syntax (and arguably makes this a little clearer).
+
+Next, we setup a simple `files()` helper return all of the files published to the client (remember, our publication is only sending down files owned by our current user so no need to filter again), sorting those items based on the date `added` field in reverse chronological order (most recent to oldest). Almost there! One last step, our `file` template.
+
+<p class="block-header">/client/templates/authenticated/file.html</p>
+
+```markup
+<template name="file">
+  <div class="file">
+    <div class="preview">
+      <a href="{{url}}" target="_blank"></a>
+      {{#if isImage url}}
+        <img src="{{url}}" alt="{{url}}">
+      {{else}}
+        <i class="fa fa-file-o"></i>
+      {{/if}}
+    </div>
+    <input type="text" class="form-control" value="{{url}}">
+  </div>
+</template>
+```
+
+Making sense? We output the `{{url}}` of the currently output file into a few different places: a link to the file, a text input to make copying the URL easy, and then finally, if we determine the URL passed is an image, we set the `{{url}}` to an image tag, and if not, simply return a generic file icon. Let's look at our logic for the `isImage` helper real quick.
+
+<p class="block-header">/client/templates/authenticated/file.js</p>
+
+```javascript
+Template.file.helpers({
+  isImage( url ) {
+    const formats = [ 'jpg', 'jpeg', 'png', 'gif' ];
+    return _.find( formats, ( format ) => url.indexOf( format ) > -1 );
+  }
+});
+```
+
+Here, we take the URL passed as the argument to our `{{#if}}` block and make use of the Underscore [`_.find()`](http://underscorejs.org/#find) method to loop over an array of file formats. Inside of our `find()`, we test our URL to see if it contains the format, returning `true` if it does and `false` otherwise. 
+
+If it's not clear, the goal of this helper allows us to determine at the template level whether or not the file we're trying to show is in image. If it is, we want to display a thumbnail of that image. If it isn't, we show our placeholder icon instead!
+
+Drumroll please...we're done! We have a complete solution for uploading files to Amazon S3 and getting a preview of items uploaded in our application. Job well done.
+
+### Wrap Up &amp; Summary
+In this recipe, we learned how to upload files to Amazon S3 using the [edgee:slingshot]() package. We learned how to get an account on Amazon and configure a bucket in their S3 service, setup CORS configuration, and wrapped our head around the access control list concept. We also took a close look at using a module pattern for organizing our code when performing tasks involing multiple steps.
