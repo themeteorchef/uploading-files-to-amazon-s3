@@ -30,7 +30,7 @@ Purely optional, we'll use the [`fortawesome:fontawesome`](https://atmospherejs.
 ### What are we building?
 When we're building our applications, we generally store our static assets like images, documents, and other content in our `/public` folder. For development purposes and smaller applications this is fine, but when we go into production, this can produce unintended consequences in respect to the performance of our application. 
 
-To get around this, we can rely on [cloud services](http://themeteorchef.com/blog/managing-static-content/#tmc-cloud-services) like [Amazon S3](http://themeteorchef.com/blog/managing-static-content/#tmc-amazon-s3) to store our static files _for us_. The reason we choose to do this instead of storing our files locally has to do with resources. Every time a user loads up our app, if we display a static asset on screen—for example, an image—our application has to handle loading that asset directly. 
+To get around this, we can rely on [cloud services](https://themeteorchef.com/blog/managing-static-content/#tmc-cloud-services) like [Amazon S3](http://themeteorchef.com/blog/managing-static-content/#tmc-amazon-s3) to store our static files _for us_. The reason we choose to do this instead of storing our files locally has to do with resources. Every time a user loads up our app, if we display a static asset on screen—for example, an image—our application has to handle loading that asset directly. 
 
 This means that not only is our application having to load up our templates, logic, and other code, but it's also having to serve up images. This can produce bottlenecks in respect to CPU, memory, and bandwidth usage. By using a service like Amazon S3, we can offset the cost of this by relying on their servers and bandwidth to do the bulk of the work on our behalf.
 
@@ -47,7 +47,7 @@ In this recipe, we're going to learn how to automate the process of uploading fi
 Here's what we're after:
 
 <figure>
-  <img src="http://cl.ly/image/1K2f311k2E1I/uploading-file.gif" alt="Look at that belly flop!">
+  <img src="https://cl.ly/image/1K2f311k2E1I/uploading-file.gif" alt="Look at that belly flop!">
   <figcaption>Look at that belly flop!</figcaption>
 </figure>
 
@@ -67,7 +67,7 @@ Once these are in place, we'll be able to implement our uploading interface much
 It's highly likely that you already have an Amazon account set up for personal purchases, but for managing services like S3, it's best if we create a separate account. Nothing _bad_ will happen if you don't create a separate account. But, if you're working with other people and they need access to your account, you wouldn't want them seeing your recent purchase of the [Saved by the Bell: The New Class](https://www.youtube.com/watch?v=TEFcfFUJVuk) box set, would you? Sorry, Robert Sutherland Telfer, you can't replace Zack Morris.
 
 <figure>
-  <img src="http://cl.ly/image/2b3o0C1L2e2l/Image%202015-09-22%20at%202.38.38%20PM.png" alt="Entering payment information on Amazon. No such thing as a free lunch, eh Bezos?">
+  <img src="https://cl.ly/image/2b3o0C1L2e2l/Image%202015-09-22%20at%202.38.38%20PM.png" alt="Entering payment information on Amazon. No such thing as a free lunch, eh Bezos?">
   <figcaption>Entering payment information on Amazon. No such thing as a free lunch, eh Bezos?</figcaption>
 </figure>
 
@@ -81,7 +81,7 @@ Okay! Once this is set up you will be asked to jump through a few more hoops and
 Okay, now for what we actually care about! After a bit of Where's Waldo, find [the S3 option in the Amazon AWS Dashboard](https://console.aws.amazon.com/s3/home). Once you're here, you will be prompted to create a bucket. This is what we're after. Click that big blue "Create Bucket" button to get started.
 
 <figure>
-  <img src="http://cl.ly/image/28112X0J2E0b/Image%202015-09-22%20at%202.55.17%20PM.png" alt="Setting up a new bucket on Amazon S3.">
+  <img src="https://cl.ly/image/28112X0J2E0b/Image%202015-09-22%20at%202.55.17%20PM.png" alt="Setting up a new bucket on Amazon S3.">
   <figcaption>Setting up a new bucket on Amazon S3.</figcaption>
 </figure>
 
@@ -116,7 +116,7 @@ While we won't be working with any code from the package just yet, the `edgee:sl
 XML?! Breathe. To get this added, we need to click on our bucket's name in our list of buckets and click on the silver "Properties" tab (in the middle of "None" and "Transfers") in the top right of the screen. From here, we need to click on the "Permissions" option to reveal the permissions options for our bucket. Once on screen, we need to click the "Edit CORS Configuration" button in the bottom right of the slide down. This will reveal an area for us to paste in the code above. Here's how the process looks on screen:
 
 <figure>
-  <img src="http://cl.ly/image/1n1C2L1q3m0K/adding-cors-config.gif" alt="Setting a CORS policy on our bucket.">
+  <img src="https://cl.ly/image/1n1C2L1q3m0K/adding-cors-config.gif" alt="Setting a CORS policy on our bucket.">
   <figcaption>Setting a CORS policy on our bucket.</figcaption>
 </figure>
 
@@ -124,7 +124,7 @@ Um, okay. Got it! But what the heck does this mean? Remember that CORS is like a
 
 In this snippet, we're saying that you're allowed to make `PUT`, `POST`, `GET`, and `HEAD` requests on our bucket from any origin domain (e.g. `http://locahost:300`, or, `http://app.com`), and include any [HTTP headers](https://en.wikipedia.org/wiki/List_of_HTTP_header_fields) that you'd like. WHAT?! Doesn't this essentially open our bucket up to the world? Good question. It _would_ if behind the scenes Amazon didn't have any security beyond this in place, but let's be serious: Bezos ain't got time for that.
 
-![Jeff Bezos evil laugh](http://cl.ly/image/0y422f3u3b2r/bXs4mMS.png)
+![Jeff Bezos evil laugh](https://cl.ly/image/0y422f3u3b2r/bXs4mMS.png)
 
 To prevent unwanted requests like this, Amazon gives us access keys (fancy API keys) that we can use to authenticate our uploads. In other words, without these, Amazon will reject our request to do anything.
 
@@ -174,18 +174,18 @@ Obviously this has _nothing_ to do with Amazon S3, but hopefully the example is 
 
 Instead, [the recommended process](https://github.com/CulturalMe/meteor-slingshot/#security) is to use Amazon's original mechanism for authentication: Access Keys. When you load up the security credentials screen, you can access these by clicking the "Continue to Security Credentials" option and then toggling the "Access Keys (Access Key ID and Secret Access Key)" item in the list on the page revealed after closing the window. Here, you will see an option for creating a new access key. 
 
-![Create Access Key window with key area revealed](http://cl.ly/image/2j102a3k320Y/finding-aws-keys.png)
+![Create Access Key window with key area revealed](https://cl.ly/image/2j102a3k320Y/finding-aws-keys.png)
 
 Click this and then select the blue "Show Access Key" link to reveal your keys.
 
-**THIS IS REALLY IMPORTANT**. You must, must, must, store these keys in a safe, secure location. In the land of Internet Spam Jerks, AWS keys are _pure gold_. Do not let these out into the open! Back them up in a secure location as this will be your only opportunity to do so (e.g. I prefer to use [1password](https://agilebits.com/onepassword) for this) and for the love of all that is holy [do not commit your keys to your public repository](http://themeteorchef.com/snippets/making-use-of-settings-json/#tmc-settingsjson-in-development-vs-production).
+**THIS IS REALLY IMPORTANT**. You must, must, must, store these keys in a safe, secure location. In the land of Internet Spam Jerks, AWS keys are _pure gold_. Do not let these out into the open! Back them up in a secure location as this will be your only opportunity to do so (e.g. I prefer to use [1Password](https://agilebits.com/onepassword) for this) and for the love of all that is holy [do not commit your keys to your public repository](https://themeteorchef.com/snippets/making-use-of-settings-json/#tmc-settingsjson-in-development-vs-production).
 
 <div class="note danger">
   <h3>No joke <i class="fa fa-frown-o"></i></h3>
   <p>This is important because if someone gets access to these, they can start spinning up new services on your behalf. There have been <a href="https://securosis.com/blog/my-500-cloud-security-screwup">several</a> <a href="http://www.devfactor.net/2014/12/30/2375-amazon-mistake/">horror stories</a> of AWS keys being leaked resulting in multi-thousand dollar charges being made by spammers. Do not take this lightly!</p>
 </div>
 
-To make use of these in our application, we're going to [rely on using settings.json](http://themeteorchef.com/snippets/making-use-of-settings-json). This will ensure that our keys are not stored in our application code, but also, so we can add our settings files to our `.gitignore` and prevent them from being committed with our repository. Generally speaking, if your repository is **_private_**, it's okay to commit your development/testing keys, but _not_ your production keys. To be safe, it's best to not commit _any_ of your keys, especially those from Amazon. To make sure we do this, in your application add a new file `.gitignore` and add:
+To make use of these in our application, we're going to [rely on using settings.json](https://themeteorchef.com/snippets/making-use-of-settings-json). This will ensure that our keys are not stored in our application code, but also, so we can add our settings files to our `.gitignore` and prevent them from being committed with our repository. Generally speaking, if your repository is **_private_**, it's okay to commit your development/testing keys, but _not_ your production keys. To be safe, it's best to not commit _any_ of your keys, especially those from Amazon. To make sure we do this, in your application add a new file `.gitignore` and add:
 
 <p class="block-header">.gitignore</p>
 
@@ -522,7 +522,7 @@ Once our file restrictions are in place, we define our upload directive. Notice,
 
 > Amazon S3 Access Control Lists (ACLs) enable you to manage access to buckets and objects. Each bucket and object has an ACL attached to it as a subresource. It defines which AWS accounts or groups are granted access and the type of access. When a request is received against a resource, Amazon S3 checks the corresponding ACL to verify the requester has the necessary access permissions.
 >
-> &mdash; via [Amazon ACL Overview](http://docs.aws.amazon.com/AmazonS3/latest/dev/acl-overview.html)
+> &mdash; via [Amazon ACL Overview](https://docs.aws.amazon.com/AmazonS3/latest/dev/acl-overview.html)
 
 This setting `public-read` is [a pre-made ACL](http://docs.aws.amazon.com/AmazonS3/latest/dev/acl-overview.html#canned-acl) given to us by Amazon which specifies that "Owner gets `FULL_CONTROL`. The AllUsers group gets `READ` access." In other words, _we_ can do whatever we want to our bucket but our users and other third-parties can only _read_ content from it. Of course, we can get as specific as we'd like with this, [defining our own ACLs](http://docs.aws.amazon.com/AmazonS3/latest/dev/manage-acls-using-console.html) and passing the names of those here instead. 
 
@@ -532,7 +532,7 @@ Finally, we call a method `key` which takes a `file` argument equal to the file 
 
 <div class="note info">
   <h3>Where are our access keys? <i class="fa fa-info"></i></h3>
-  <p>Remeber when we set our access keys inside of our <code>settings-development.json</code> file earlier and mentioned starting our server with this in tow? Well, behind the scenes, the <code>edgee:slingshot</code> package knows to look in our settings file for the values we specified. To make this all work, they take our keys and generate an Amazon <a href="http://docs.aws.amazon.com/IAM/latest/UserGuide/id_credentials_temp.html">Session Token</a> to remove the need to send our keys over the wire to Amazon.</p>
+  <p>Remeber when we set our access keys inside of our <code>settings-development.json</code> file earlier and mentioned starting our server with this in tow? Well, behind the scenes, the <code>edgee:slingshot</code> package knows to look in our settings file for the values we specified. To make this all work, they take our keys and generate an Amazon <a href="https://docs.aws.amazon.com/IAM/latest/UserGuide/id_credentials_temp.html">Session Token</a> to remove the need to send our keys over the wire to Amazon.</p>
 </div>
 
 That's it! We're all conigured on the server, so now we can go back to the client to finish up our module.
@@ -682,7 +682,7 @@ This one is simple, but important for preventing unwanted data from getting into
 Okay. Last step. We've got our files on Amazon and in our database, now, we just need to get them on the template.
 
 ### Displaying files
-This one is pretty easy. We need to do two things: [set up a publication](http://themeteorchef.com/snippets/publication-and-subscription-patterns/#tmc-publications) for our data to get it on the client and then setup a template and some logic to output that data.
+This one is pretty easy. We need to do two things: [set up a publication](https://themeteorchef.com/snippets/publication-and-subscription-patterns/#tmc-publications) for our data to get it on the client and then setup a template and some logic to output that data.
 
 <p class="block-header">/server/publications/files.js</p>
 
@@ -744,7 +744,7 @@ Template.files.helpers({
 });
 ```
 
-Two things happening here. First, we subscribe to our `files` publication we just setup using that nifty [expression syntax](http://themeteorchef.com/blog/what-is-es2015/#tmc-statement-and-expression-bodies) added in ES2015. Notice, because we're using the Arrow syntax meaning our scope is set to _outside_ of the current function, we add our subscription to our template using `Template.instance().subscribe()` instead of `this.subscribe()`. The two are equal, but this helps us get around the scoping issue while keeping the clean syntax (and arguably makes this a little clearer).
+Two things happening here. First, we subscribe to our `files` publication we just setup using that nifty [expression syntax](https://themeteorchef.com/blog/what-is-es2015/#tmc-statement-and-expression-bodies) added in ES2015. Notice, because we're using the Arrow syntax meaning our scope is set to _outside_ of the current function, we add our subscription to our template using `Template.instance().subscribe()` instead of `this.subscribe()`. The two are equal, but this helps us get around the scoping issue while keeping the clean syntax (and arguably makes this a little clearer).
 
 Next, we setup a simple `files()` helper to return all of the files published to the client (remember, our publication is only sending down files owned by our current user so no need to filter again), sorting those items based on the date `added` field in reverse chronological order (most recent to oldest). Almost there! One last step, our `file` template.
 
